@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Input
 from tensorflow.keras.optimizers import Adam
 import joblib
 
@@ -65,7 +65,8 @@ def train_model(file_name, model_filename, scaler_filename):
     X, y = np.array(X), np.array(y)
 
     model = Sequential([
-        LSTM(50, return_sequences=True, input_shape=(X.shape[1], X.shape[2])),
+        Input(shape=(X.shape[1], X.shape[2])),
+        LSTM(50, return_sequences=True),
         LSTM(50),
         Dense(1, activation='sigmoid')
     ])
@@ -80,4 +81,4 @@ def train_model(file_name, model_filename, scaler_filename):
     print(f"Scaler saved to {scaler_filename}")
 
 if __name__ == "__main__":
-    train_model('ETH_USD.csv', 'trading_model.h5', 'scaler.pkl')
+    train_model('DATA/ETH_USD_TrainingSet-1601_2501.csv', 'trading_model.h5', 'scaler.pkl')
