@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 import joblib
-from tensorflow.keras.models import load_model
 
 class RealTimeTradeBot:
     def __init__(self):
@@ -9,22 +9,17 @@ class RealTimeTradeBot:
         self._initial_stacks = self._stacks.copy()
         self.transaction_log = []
         self.model = None
-        self.scaler = None
         self.results = []
-        self.n_steps = 10
-        self.history = []
 
     def main_engine(self):
-        self.load_model('trading_model.h5', 'scaler.pkl')
+        self.load_model('trading_model.pkl')
         self.simulate_trading('DATA/BTC_USD.csv')
         self.simulate_trading('DATA/ETH_USD.csv')
         self.show_profit()
 
-    def load_model(self, model_filename, scaler_filename):
-        self.model = load_model(model_filename)
-        self.scaler = joblib.load(scaler_filename)
-        print(f"Model loaded from {model_filename}")
-        print(f"Scaler loaded from {scaler_filename}")
+    def load_model(self, filename):
+        self.model = joblib.load(filename)
+        print(f"Model loaded from {filename}")
 
     def load_and_preprocess_data(self, file_name):
         df = pd.read_csv(file_name, dtype=str)
@@ -48,27 +43,20 @@ class RealTimeTradeBot:
         df = df.sort_values('date')
         df['price_change'] = df['close'] - df['open']
         df['high_low_diff'] = df['high'] - df['low']
-        df['moving_avg_5'] = df['close'].rolling(window=5).mean()
-        df['moving_avg_10'] = df['close'].rolling(window=10).mean()
-        df['momentum'] = df['close'] - df['close'].shift(10)
-        return df.dropna()
+        return df
 
     def simulate_trading(self, file_name):
         df = self.load_and_preprocess_data(file_name)
         df.dropna(inplace=True)
 
         for index, row in df.iterrows():
-            features = self.scaler.transform([[row['price_change'], row['high_low_diff'], row['volume'], row['moving_avg_5'], row['moving_avg_10'], row['momentum']]])
-            self.history.append(features[0])
-            if len(self.history) > self.n_steps:
-                self.history.pop(0)
-            if len(self.history) == self.n_steps:
-                prediction = self.model.predict(np.array([self.history]))[0][0]
+            features = pd.DataFrame([[row['price_change'], row['high_low_diff'], row['volume']]], columns=['price_change', 'high_low_diff', 'volume'])
+            prediction = self.model.predict(features)[0]
 
-                if prediction > 0.5:  # Buy signal
-                    self.buy(file_name.split('_')[0], row['open'])
-                else:  # Sell signal
-                    self.sell(file_name.split('_')[0], row['open'])
+            if prediction == 1:  # Buy signal
+                self.buy(file_name.split('_')[0], row['open'])
+            else:  # Sell signal
+                self.sell(file_name.split('_')[0], row['open'])
 
     def buy(self, pair, price):
         if pair == 'DATA/ETH':
@@ -90,7 +78,7 @@ class RealTimeTradeBot:
 
     def sell(self, pair, price):
         if pair == 'DATA/ETH':
-            sell_amount = self._stacks['ETH'] * 0.10
+            sell_amount = self._stacks['ETH'] * 0.25
             if sell_amount > 0:
                 self._stacks['USDT'] += sell_amount * price
                 self._stacks['ETH'] -= sell_amount
@@ -98,7 +86,7 @@ class RealTimeTradeBot:
                 self.results.append({'action': 'sell', 'pair': pair, 'amount': sell_amount, 'price': price, 'total_usdt': self._stacks['USDT']})
                 print(f"sell {pair} {sell_amount} at {price}")
         elif pair == 'DATA/BTC':
-            sell_amount = self._stacks['BTC'] * 0.10
+            sell_amount = self._stacks['BTC'] * 0.25
             if sell_amount > 0:
                 self._stacks['USDT'] += sell_amount * price
                 self._stacks['BTC'] -= sell_amount

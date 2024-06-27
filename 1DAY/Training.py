@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Input
+from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.optimizers import Adam
 import joblib
 
@@ -32,9 +32,7 @@ def load_and_preprocess_data(file_name):
     df['moving_avg_10'] = df['close'].rolling(window=10).mean()
     df['momentum'] = df['close'] - df['close'].shift(10)
     df.dropna(inplace=True)
-
     df['target'] = (df['close'].shift(-1) > df['close']).astype(int)
-    print(df.head())  # Debugging: Print the first few rows to verify the 'target' column
     return df.dropna()
 
 def create_sequences(data, n_steps):
@@ -49,24 +47,18 @@ def create_sequences(data, n_steps):
 
 def train_model(file_name, model_filename, scaler_filename):
     df = load_and_preprocess_data(file_name)
-    features = df[['price_change', 'high_low_diff', 'volume', 'moving_avg_5', 'moving_avg_10', 'momentum']]
-    target = df['target']
+    features = df[['price_change', 'high_low_diff', 'volume', 'moving_avg_5', 'moving_avg_10', 'momentum', 'target']]
 
     scaler = MinMaxScaler()
     features_scaled = scaler.fit_transform(features)
 
-    # Ensure 'target' column is retained for sequence creation
-    features_scaled_df = pd.DataFrame(features_scaled, columns=features.columns)
-    features_scaled_df['target'] = target.values
-
-    sequences = create_sequences(features_scaled_df, 10)
+    sequences = create_sequences(pd.DataFrame(features_scaled, columns=features.columns), 10)
 
     X, y = zip(*sequences)
     X, y = np.array(X), np.array(y)
 
     model = Sequential([
-        Input(shape=(X.shape[1], X.shape[2])),
-        LSTM(50, return_sequences=True),
+        LSTM(50, return_sequences=True, input_shape=(X.shape[1], X.shape[2])),
         LSTM(50),
         Dense(1, activation='sigmoid')
     ])
@@ -79,6 +71,7 @@ def train_model(file_name, model_filename, scaler_filename):
 
     print(f"Model saved to {model_filename}")
     print(f"Scaler saved to {scaler_filename}")
+
 
 if __name__ == "__main__":
     train_model('DATA/ETH_USD_TrainingSet-1601_2501.csv', 'trading_model.h5', 'scaler.pkl')
