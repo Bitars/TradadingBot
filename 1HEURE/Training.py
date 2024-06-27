@@ -80,4 +80,4 @@ def train_model(file_name, model_filename, scaler_filename):
     print(f"Scaler saved to {scaler_filename}")
 
 if __name__ == "__main__":
-    train_model('ETH_USD.csv', 'trading_model.h5', 'scaler.pkl')
+    train_model('DATA/ETH_USD_TrainingSet-2301_2506.csv', 'trading_model.h5', 'scaler.pkl')

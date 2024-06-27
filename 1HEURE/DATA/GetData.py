@@ -42,7 +42,7 @@ def save_to_csv(df, filename):
     print(f"Data saved to {filename}")
 
 # Example usage
-start_time = int(pd.Timestamp('2024-01-15').timestamp() * 1000)
-end_time = int(pd.Timestamp('2024-05-24').timestamp() * 1000)
-df = get_binance_klines('ETHUSDT', '15m', start_time, end_time)
+start_time = int(pd.Timestamp('2024-05-01').timestamp() * 1000)
+end_time = int(pd.Timestamp('2024-05-27').timestamp() * 1000)
+df = get_binance_klines('ETHUSDT', '1h', start_time, end_time)
 save_to_csv(df, 'ETH_USD.csv')
